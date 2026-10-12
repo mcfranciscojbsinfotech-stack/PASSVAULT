@@ -1,0 +1,32 @@
+{
+  "name": "passvault-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "PassVault: Web-Based Password Manager with Online Synchronization and Isolated Local Storage",
+  "scripts": {
+    "dev:backend": "pnpm --filter backend dev",
+    "dev:frontend": "pnpm --filter frontend dev",
+    "dev": "pnpm --parallel --filter backend --filter frontend dev",
+    "build:packages": "pnpm --filter \"@passvault/*\" build",
+    "build:backend": "pnpm --filter backend build",
+    "build:frontend": "pnpm --filter frontend build",
+    "build": "pnpm build:packages && pnpm build:backend && pnpm build:frontend",
+    "test": "vitest run",
+    "test:crypto": "vitest run packages/crypto",
+    "test:backend": "vitest run backend",
+    "test:frontend": "vitest run frontend",
+    "test:security": "vitest run tests/security",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:seed": "pnpm --filter backend seed"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "prisma": "6.19.3",
+    "typescript": "^5.7.2",
+    "vitest": "^3.0.4"
+  },
+  "dependencies": {
+    "@prisma/client": "6.19.3"
+  }
+}
