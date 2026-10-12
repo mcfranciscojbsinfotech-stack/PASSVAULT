@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/auth-context';
 import { VaultService } from '@/lib/vault-service';
 import { CredentialModal } from '@/components/vault/CredentialModal';
 import { CredentialCard } from '@/components/vault/CredentialCard';
+import { PasswordHealthChecker } from '@/components/vault/PasswordHealthChecker';
 import {
   KeyRound,
   ShieldAlert,
@@ -138,6 +139,18 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Password Health Checker (Client-Side Zero-Knowledge) */}
+      {isUnlocked && totalCredentials > 0 && (
+        <PasswordHealthChecker
+          credentials={credentials}
+          isolatedCredentials={isolatedCredentials}
+          onEditCredential={(target) => {
+            setEditItem(target);
+            setModalOpen(true);
+          }}
+        />
+      )}
 
       {/* Quick Navigation Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">

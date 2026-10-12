@@ -29,7 +29,7 @@ export default function LoginPage() {
         router.push('/verify-mfa');
       } else {
         if (portalRole === 'ADMIN') {
-          router.push('/admin/users');
+          router.push('/admin');
         } else {
           router.push('/dashboard');
         }

@@ -69,7 +69,7 @@ export function Navbar() {
 
               {isAdmin && (
                 <Link
-                  href="/admin/users"
+                  href="/admin"
                   className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-cyber-50 text-cyber-700 hover:bg-cyber-100 border border-cyber-200 transition-colors"
                 >
                   <Sparkles className="h-3.5 w-3.5 text-cyber-600" />

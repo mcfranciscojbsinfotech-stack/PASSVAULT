@@ -9,6 +9,7 @@ import {
   ROLES,
   AdminUserUpdateSchema,
   CreateSubAdminSchema,
+  AdminCreateUserSchema,
 } from '@passvault/shared';
 
 const serverStartTime = Date.now();
@@ -73,6 +74,75 @@ export const adminRoutes: FastifyPluginAsync = async (server: FastifyInstance) =
     }));
 
     return reply.send({ users: formatted });
+  });
+
+  // Admin registers a user or sub-admin account directly from the Admin Dashboard
+  server.post('/users', async (request, reply) => {
+    const adminUser = request.user!;
+
+    const parseResult = AdminCreateUserSchema.safeParse(request.body);
+    if (!parseResult.success) {
+      return reply.status(400).send({ error: parseResult.error.errors[0].message });
+    }
+
+    const { firstName, lastName, email, contactNumber, dateOfBirth, password, role } = parseResult.data;
+
+    // Only primary ADMIN can create a SUB_ADMIN
+    if (role === ROLES.SUB_ADMIN && adminUser.role !== ROLES.ADMIN) {
+      return reply.status(403).send({
+        error: 'Access denied: only primary administrators can create sub-admin accounts.',
+      });
+    }
+
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      return reply.status(409).send({ error: 'An account with this email address already exists' });
+    }
+
+    const passwordHash = await hashPassword(password);
+
+    const newUser = await prisma.user.create({
+      data: {
+        email,
+        firstName,
+        lastName,
+        contactNumber,
+        dateOfBirth,
+        passwordHash,
+        role,
+        isVerified: true, // Pre-verified by administrator
+        createdBy: adminUser.id,
+      },
+    });
+
+    await logAuditEvent({
+      eventType: role === ROLES.SUB_ADMIN ? AUDIT_EVENT_TYPES.SUB_ADMIN_CREATED : AUDIT_EVENT_TYPES.AUTH_REGISTER,
+      status: 'SUCCESS',
+      userId: adminUser.id,
+      actorEmail: adminUser.email,
+      details: {
+        createdUserId: newUser.id,
+        createdEmail: newUser.email,
+        role: newUser.role,
+        firstName,
+        lastName,
+      },
+      request,
+    });
+
+    return reply.status(201).send({
+      message: 'Account created successfully.',
+      user: {
+        id: newUser.id,
+        email: newUser.email,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+        contactNumber: newUser.contactNumber,
+        dateOfBirth: newUser.dateOfBirth,
+        role: newUser.role,
+        isVerified: newUser.isVerified,
+      },
+    });
   });
 
   // Admin registers a SUB_ADMIN account directly from the Admin Dashboard
@@ -143,7 +213,7 @@ export const adminRoutes: FastifyPluginAsync = async (server: FastifyInstance) =
     });
   });
 
-  // Update user role or suspension status
+  // Update user role or suspension status or permitted profile details
   server.patch('/users/:id', async (request, reply) => {
     const { id } = request.params as { id: string };
     const adminUser = request.user!;
@@ -183,6 +253,10 @@ export const adminRoutes: FastifyPluginAsync = async (server: FastifyInstance) =
     const updated = await prisma.user.update({
       where: { id },
       data: {
+        ...(parse.data.firstName !== undefined ? { firstName: parse.data.firstName } : {}),
+        ...(parse.data.lastName !== undefined ? { lastName: parse.data.lastName } : {}),
+        ...(parse.data.contactNumber !== undefined ? { contactNumber: parse.data.contactNumber } : {}),
+        ...(parse.data.dateOfBirth !== undefined ? { dateOfBirth: parse.data.dateOfBirth } : {}),
         ...(parse.data.role ? { role: parse.data.role } : {}),
         ...(typeof parse.data.isSuspended === 'boolean'
           ? { isSuspended: parse.data.isSuspended }
@@ -231,6 +305,10 @@ export const adminRoutes: FastifyPluginAsync = async (server: FastifyInstance) =
       user: {
         id: updated.id,
         email: updated.email,
+        firstName: updated.firstName,
+        lastName: updated.lastName,
+        contactNumber: updated.contactNumber,
+        dateOfBirth: updated.dateOfBirth,
         role: updated.role,
         isSuspended: updated.isSuspended,
       },
@@ -314,6 +392,10 @@ export const adminRoutes: FastifyPluginAsync = async (server: FastifyInstance) =
       totalEncryptedItems,
       totalAuditEvents,
       recentErrors,
+      adminUsers,
+      subAdminUsers,
+      standardUsers,
+      suspendedUsers,
     ] = await Promise.all([
       prisma.user.count(),
       prisma.authenticationSession.count({
@@ -327,6 +409,10 @@ export const adminRoutes: FastifyPluginAsync = async (server: FastifyInstance) =
           createdAt: { gt: new Date(Date.now() - 24 * 60 * 60 * 1000) },
         },
       }),
+      prisma.user.count({ where: { role: ROLES.ADMIN } }),
+      prisma.user.count({ where: { role: ROLES.SUB_ADMIN } }),
+      prisma.user.count({ where: { role: ROLES.USER } }),
+      prisma.user.count({ where: { isSuspended: true } }),
     ]);
 
     return reply.send({
@@ -338,6 +424,10 @@ export const adminRoutes: FastifyPluginAsync = async (server: FastifyInstance) =
       totalEncryptedItemsCount: totalEncryptedItems,
       auditEventsCount: totalAuditEvents,
       recentErrorsCount: recentErrors,
+      adminUsersCount: adminUsers,
+      subAdminUsersCount: subAdminUsers,
+      standardUsersCount: standardUsers,
+      suspendedUsersCount: suspendedUsers,
     });
   });
 

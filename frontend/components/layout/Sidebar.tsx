@@ -45,9 +45,10 @@ export function Sidebar() {
   ];
 
   const adminLinks = [
+    { label: 'Overview', href: '/admin', icon: LayoutDashboard },
     { label: 'User Directory', href: '/admin/users', icon: Users },
     { label: 'Role Permissions', href: '/admin/roles', icon: Shield },
-    { label: 'Storage Metrics', href: '/admin/storage', icon: Database },
+    { label: 'Storage & Backups', href: '/admin/storage', icon: Database },
     { label: 'System Monitoring', href: '/admin/monitoring', icon: Activity },
     { label: 'Network & CORS', href: '/admin/network', icon: Network },
     { label: 'Security Events', href: '/admin/security', icon: ShieldCheck },
