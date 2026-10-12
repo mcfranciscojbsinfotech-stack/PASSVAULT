@@ -2,10 +2,10 @@ import { z } from 'zod';
 import { ROLES, STORAGE_MODES } from '../constants/index.js';
 
 export const RegisterSchema = z.object({
-  firstName: z.string().min(1, 'First name is required').max(100).trim(),
-  lastName: z.string().min(1, 'Last name is required').max(100).trim(),
+  firstName: z.string().min(1, 'First name is required').max(100, 'First name must be at most 100 characters').trim(),
+  lastName: z.string().min(1, 'Last name is required').max(100, 'Last name must be at most 100 characters').trim(),
   email: z.string().email('Please enter a valid email address').toLowerCase().trim(),
-  contactNumber: z.string().min(7, 'Contact number is required').max(25).trim(),
+  contactNumber: z.string().min(3, 'Contact number is required').max(100, 'Contact number must be at most 100 characters').trim(),
   dateOfBirth: z.string().min(1, 'Date of birth is required').trim(),
   password: z
     .string()
@@ -16,10 +16,10 @@ export const RegisterSchema = z.object({
 });
 
 export const CreateSubAdminSchema = z.object({
-  firstName: z.string().min(1, 'First name is required').max(100).trim(),
-  lastName: z.string().min(1, 'Last name is required').max(100).trim(),
+  firstName: z.string().min(1, 'First name is required').max(100, 'First name must be at most 100 characters').trim(),
+  lastName: z.string().min(1, 'Last name is required').max(100, 'Last name must be at most 100 characters').trim(),
   email: z.string().email('Please enter a valid email address').toLowerCase().trim(),
-  contactNumber: z.string().min(7, 'Contact number is required').max(25).trim(),
+  contactNumber: z.string().min(3, 'Contact number is required').max(100, 'Contact number must be at most 100 characters').trim(),
   dateOfBirth: z.string().min(1, 'Date of birth is required').trim(),
   password: z
     .string()
@@ -84,7 +84,7 @@ export const SyncPullQuerySchema = z.object({
 export const AdminUserUpdateSchema = z.object({
   firstName: z.string().min(1, 'First name is required').max(100).optional(),
   lastName: z.string().min(1, 'Last name is required').max(100).optional(),
-  contactNumber: z.string().max(30).optional(),
+  contactNumber: z.string().max(100, 'Contact number must be at most 100 characters').optional(),
   dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)').optional(),
   role: z.enum([ROLES.USER, ROLES.ADMIN, ROLES.SUB_ADMIN]).optional(),
   isSuspended: z.boolean().optional(),
@@ -94,7 +94,7 @@ export const AdminCreateUserSchema = z.object({
   firstName: z.string().min(1, 'First name is required').max(100),
   lastName: z.string().min(1, 'Last name is required').max(100),
   email: z.string().email('Valid email address is required').max(255),
-  contactNumber: z.string().max(30).optional().default(''),
+  contactNumber: z.string().max(100, 'Contact number must be at most 100 characters').optional().default(''),
   dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)').optional().default(''),
   password: z.string().min(8, 'Password must be at least 8 characters').max(128),
   role: z.enum([ROLES.USER, ROLES.SUB_ADMIN]).default(ROLES.USER),
