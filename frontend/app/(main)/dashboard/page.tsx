@@ -22,7 +22,7 @@ import { STORAGE_MODES, StorageMode, VaultItemDecrypted } from '@passvault/share
 
 export default function DashboardPage() {
   const { user } = useAuth();
-  const { isUnlocked, recoveryCode, credentials, isolatedCredentials, refreshVault } = useVault();
+  const { isUnlocked, recoveryCode, credentials, isolatedCredentials, refreshVault, openUnlockModal } = useVault();
   const [modalOpen, setModalOpen] = useState(false);
   const [editItem, setEditItem] = useState<VaultItemDecrypted | null>(null);
 
@@ -61,16 +61,41 @@ export default function DashboardPage() {
 
         <button
           onClick={() => {
+            if (!isUnlocked) {
+              openUnlockModal();
+              return;
+            }
             setEditItem(null);
             setModalOpen(true);
           }}
-          disabled={!isUnlocked}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyber-600 hover:bg-cyber-700 disabled:opacity-50 text-white text-xs font-semibold shadow-md shadow-cyber-600/20 transition-all"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyber-600 hover:bg-cyber-700 text-white text-xs font-semibold shadow-md shadow-cyber-600/20 transition-all"
         >
           <Plus className="h-4 w-4" />
           <span>New Credential</span>
         </button>
       </div>
+
+      {/* Vault Locked Callout Banner */}
+      {!isUnlocked && (
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+          <div className="flex items-start gap-3">
+            <Lock className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <h3 className="text-sm font-bold text-amber-950">Your Personal Vault is Locked</h3>
+              <p className="text-xs text-amber-800 mt-0.5">
+                To encrypt, decrypt, and manage your credentials, unlock your vault using your 25-character recovery code or generate a new key.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={openUnlockModal}
+            className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs shadow-md transition-all shrink-0 flex items-center justify-center gap-2"
+          >
+            <KeyRound className="h-4 w-4" />
+            <span>Unlock Personal Vault</span>
+          </button>
+        </div>
+      )}
 
       {/* Metrics Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -207,9 +232,23 @@ export default function DashboardPage() {
           <div className="p-8 text-center rounded-2xl bg-white border border-dashed border-slate-300">
             <KeyRound className="h-8 w-8 text-slate-400 mx-auto mb-2" />
             <p className="text-xs font-semibold text-slate-700">No credentials saved yet</p>
-            <p className="text-[11px] text-slate-400 mt-1">
+            <p className="text-[11px] text-slate-400 mt-1 mb-4">
               Click &quot;New Credential&quot; to securely encrypt and store your first password.
             </p>
+            <button
+              onClick={() => {
+                if (!isUnlocked) {
+                  openUnlockModal();
+                  return;
+                }
+                setEditItem(null);
+                setModalOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-cyber-600 hover:bg-cyber-700 text-white text-xs font-semibold shadow-sm transition-all"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Add Your First Credential</span>
+            </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

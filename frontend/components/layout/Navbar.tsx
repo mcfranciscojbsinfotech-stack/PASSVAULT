@@ -8,7 +8,7 @@ import { Shield, Lock, Unlock, LogOut, User, Sparkles } from 'lucide-react';
 
 export function Navbar() {
   const { user, isAdmin, logout } = useAuth();
-  const { isUnlocked, lockVault } = useVault();
+  const { isUnlocked, lockVault, openUnlockModal } = useVault();
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-cyber-100 bg-white/95 backdrop-blur shadow-sm">
@@ -35,7 +35,7 @@ export function Navbar() {
             className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border ${
               isUnlocked
                 ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                : 'bg-amber-50 text-amber-700 border-amber-200'
+                : 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 transition-colors'
             }`}
           >
             {isUnlocked ? (
@@ -51,10 +51,15 @@ export function Navbar() {
                 </button>
               </>
             ) : (
-              <>
+              <button
+                type="button"
+                onClick={openUnlockModal}
+                className="flex items-center gap-1.5 cursor-pointer text-amber-800 hover:text-amber-950"
+                title="Click to Unlock Vault"
+              >
                 <Lock className="h-3.5 w-3.5 text-amber-600" />
-                <span>Vault Locked</span>
-              </>
+                <span>Vault Locked &bull; Unlock</span>
+              </button>
             )}
           </div>
 

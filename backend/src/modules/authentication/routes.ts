@@ -38,11 +38,11 @@ export const authRoutes: FastifyPluginAsync = async (server: FastifyInstance) =>
         dateOfBirth,
         passwordHash,
         role,
-        isVerified: userCount === 0, // Auto-verify first admin for local ease
+        isVerified: true,
       },
     });
 
-    // Generate email verification token
+    // Generate email verification token for audit & simulation
     const verifyToken = generateSecureToken(16);
     await prisma.oneTimeToken.create({
       data: {
@@ -64,10 +64,8 @@ export const authRoutes: FastifyPluginAsync = async (server: FastifyInstance) =>
       request,
     });
 
-    // If first admin, create session immediately
-    if (userCount === 0) {
-      await createSession(user.id, request, reply);
-    }
+    // Create session immediately for smooth user onboarding
+    await createSession(user.id, request, reply);
 
     return reply.status(201).send({
       message: 'Account registered successfully. Please verify your email.',

@@ -11,6 +11,9 @@ interface VaultContextType {
   credentials: VaultItemDecrypted[];
   isolatedCredentials: VaultItemDecrypted[];
   loading: boolean;
+  unlockModalOpen: boolean;
+  openUnlockModal: () => void;
+  closeUnlockModal: () => void;
   unlockVault: (code: string) => Promise<boolean>;
   lockVault: () => void;
   refreshVault: () => Promise<void>;
@@ -26,6 +29,10 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
   const [credentials, setCredentials] = useState<VaultItemDecrypted[]>([]);
   const [isolatedCredentials, setIsolatedCredentials] = useState<VaultItemDecrypted[]>([]);
   const [loading, setLoading] = useState(false);
+  const [unlockModalOpen, setUnlockModalOpen] = useState(false);
+
+  const openUnlockModal = () => setUnlockModalOpen(true);
+  const closeUnlockModal = () => setUnlockModalOpen(false);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -85,6 +92,7 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
       ]);
       setRecoveryCode(code);
       setIsUnlocked(true);
+      setUnlockModalOpen(false);
       setCredentials(synced);
       setIsolatedCredentials(isolated);
       resetInactivityTimer();
@@ -113,6 +121,9 @@ export function VaultProvider({ children }: { children: React.ReactNode }) {
         credentials,
         isolatedCredentials,
         loading,
+        unlockModalOpen,
+        openUnlockModal,
+        closeUnlockModal,
         unlockVault,
         lockVault,
         refreshVault,

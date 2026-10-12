@@ -17,7 +17,7 @@ import {
 import { STORAGE_MODES, StorageMode, VaultItemDecrypted } from '@passvault/shared';
 
 export default function VaultPage() {
-  const { isUnlocked, recoveryCode, credentials, isolatedCredentials, refreshVault } = useVault();
+  const { isUnlocked, recoveryCode, credentials, isolatedCredentials, refreshVault, openUnlockModal } = useVault();
   const [search, setSearch] = useState('');
   const [partitionFilter, setPartitionFilter] = useState<'all' | 'sync' | 'isolated'>('all');
   const [favoriteOnly, setFavoriteOnly] = useState(false);
@@ -81,16 +81,41 @@ export default function VaultPage() {
 
         <button
           onClick={() => {
+            if (!isUnlocked) {
+              openUnlockModal();
+              return;
+            }
             setEditItem(null);
             setModalOpen(true);
           }}
-          disabled={!isUnlocked}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyber-600 hover:bg-cyber-700 disabled:opacity-50 text-white text-xs font-semibold shadow-md shadow-cyber-600/20 transition-all"
+          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-cyber-600 hover:bg-cyber-700 text-white text-xs font-semibold shadow-md shadow-cyber-600/20 transition-all"
         >
           <Plus className="h-4 w-4" />
           <span>New Credential</span>
         </button>
       </div>
+
+      {/* Vault Locked Banner */}
+      {!isUnlocked && (
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+          <div className="flex items-start gap-3">
+            <KeyRound className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <h3 className="text-sm font-bold text-amber-950">Vault is Locked</h3>
+              <p className="text-xs text-amber-800 mt-0.5">
+                Unlock your vault with your 25-character recovery code or generate a key to manage encrypted credentials.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={openUnlockModal}
+            className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs shadow-md transition-all shrink-0 flex items-center justify-center gap-2"
+          >
+            <KeyRound className="h-4 w-4" />
+            <span>Unlock Vault</span>
+          </button>
+        </div>
+      )}
 
       {/* Search and Filters toolbar */}
       <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm">
@@ -167,6 +192,22 @@ export default function VaultPage() {
               ? 'No records match your search query. Try clearing the filter.'
               : 'Your vault is currently empty. Add your first credential to get started.'}
           </p>
+          {!search.trim() && (
+            <button
+              onClick={() => {
+                if (!isUnlocked) {
+                  openUnlockModal();
+                  return;
+                }
+                setEditItem(null);
+                setModalOpen(true);
+              }}
+              className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-cyber-600 hover:bg-cyber-700 text-white text-xs font-semibold shadow-sm transition-all"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              <span>Add Credential</span>
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

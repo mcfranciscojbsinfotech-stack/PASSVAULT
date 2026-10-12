@@ -2,15 +2,20 @@
 
 import React, { useState } from 'react';
 import { useVault } from '@/lib/vault-context';
+import { useAuth } from '@/lib/auth-context';
+import { usePathname } from 'next/navigation';
 import {
   generateVaultRecoveryCode,
   validateRecoveryCode,
   formatRecoveryCode,
+  normalizeRecoveryCode,
 } from '@passvault/crypto';
-import { KeyRound, ShieldAlert, Check, Copy, AlertTriangle } from 'lucide-react';
+import { KeyRound, ShieldAlert, Check, Copy, AlertTriangle, X } from 'lucide-react';
 
 export function UnlockModal() {
-  const { isUnlocked, unlockVault } = useVault();
+  const { user } = useAuth();
+  const pathname = usePathname();
+  const { isUnlocked, unlockVault, unlockModalOpen, closeUnlockModal } = useVault();
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
   const [mode, setMode] = useState<'unlock' | 'generate'>('unlock');
@@ -18,21 +23,38 @@ export function UnlockModal() {
   const [acknowledged, setAcknowledged] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  if (isUnlocked) return null;
+  // Guard: Only display when user is logged in, vault is locked, modal is open, and not on auth/admin pages
+  if (!user || isUnlocked || !unlockModalOpen) return null;
+  if (
+    pathname === '/' ||
+    pathname.startsWith('/login') ||
+    pathname.startsWith('/register') ||
+    pathname.startsWith('/recover-account') ||
+    pathname.startsWith('/verify-') ||
+    pathname.startsWith('/admin')
+  ) {
+    return null;
+  }
 
   const handleUnlock = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    const formatted = formatRecoveryCode(code.trim());
-    if (!validateRecoveryCode(formatted)) {
-      setError('Invalid 25-character recovery code format. Crockford Base32 characters only.');
+    const cleaned = normalizeRecoveryCode(code.trim());
+    if (cleaned.length !== 25) {
+      setError(`Recovery code must be exactly 25 characters (currently ${cleaned.length}).`);
       return;
     }
 
+    if (!validateRecoveryCode(cleaned)) {
+      setError('Invalid recovery code format. Crockford Base32 characters only (excluding ambiguous 0, O, 1, I).');
+      return;
+    }
+
+    const formatted = formatRecoveryCode(cleaned);
     const success = await unlockVault(formatted);
     if (!success) {
-      setError('Unable to unlock vault with this code. Please check your recovery key.');
+      setError('Unable to unlock vault with this code. Please verify your recovery key.');
     }
   };
 
@@ -59,16 +81,26 @@ export function UnlockModal() {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4">
       <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl border border-slate-100">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="h-10 w-10 rounded-xl bg-cyber-50 border border-cyber-100 flex items-center justify-center text-cyber-600">
-            <KeyRound className="h-5 w-5" />
+        <div className="flex items-center justify-between gap-3 mb-4">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-cyber-50 border border-cyber-100 flex items-center justify-center text-cyber-600">
+              <KeyRound className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-slate-900">Personal Vault Locked</h2>
+              <p className="text-xs text-slate-500">
+                End-to-end client encryption requires your 25-character Recovery Code
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-base font-bold text-slate-900">Personal Vault Locked</h2>
-            <p className="text-xs text-slate-500">
-              End-to-end client encryption requires your 25-character Recovery Code
-            </p>
-          </div>
+          <button
+            type="button"
+            onClick={closeUnlockModal}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+            title="Dismiss for now"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
 
         {/* Tab switch */}

@@ -14,11 +14,12 @@ import {
   CheckCircle2,
   AlertTriangle,
   Lock,
+  KeyRound,
 } from 'lucide-react';
 import { STORAGE_MODES, StorageMode, VaultItemDecrypted } from '@passvault/shared';
 
 export default function IsolatePage() {
-  const { isUnlocked, recoveryCode, isolatedCredentials, refreshVault } = useVault();
+  const { isUnlocked, recoveryCode, isolatedCredentials, refreshVault, openUnlockModal } = useVault();
   const [search, setSearch] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
   const [editItem, setEditItem] = useState<VaultItemDecrypted | null>(null);
@@ -116,11 +117,14 @@ export default function IsolatePage() {
 
             <button
               onClick={() => {
+                if (!isUnlocked) {
+                  openUnlockModal();
+                  return;
+                }
                 setEditItem(null);
                 setModalOpen(true);
               }}
-              disabled={!isUnlocked}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 text-xs font-bold shadow-md transition-all"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-bold shadow-md transition-all"
             >
               <Plus className="h-4 w-4" />
               <span>Add Isolated Credential</span>
@@ -128,6 +132,28 @@ export default function IsolatePage() {
           </div>
         </div>
       </div>
+
+      {/* Vault Locked Banner */}
+      {!isUnlocked && (
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-sm">
+          <div className="flex items-start gap-3">
+            <KeyRound className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <h3 className="text-sm font-bold text-amber-950">Vault is Locked</h3>
+              <p className="text-xs text-amber-800 mt-0.5">
+                Unlock your vault with your 25-character recovery code to view and manage isolated credentials.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={openUnlockModal}
+            className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs shadow-md transition-all shrink-0 flex items-center justify-center gap-2"
+          >
+            <KeyRound className="h-4 w-4" />
+            <span>Unlock Vault</span>
+          </button>
+        </div>
+      )}
 
       {/* Search Bar */}
       <div className="flex items-center justify-between gap-4 bg-white p-3.5 rounded-2xl border border-slate-200 shadow-sm">
