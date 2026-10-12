@@ -3,6 +3,10 @@ import { UserRole, StorageMode, AuditEventType } from '../constants/index.js';
 export interface UserProfile {
   id: string;
   email: string;
+  firstName?: string;
+  lastName?: string;
+  contactNumber?: string | null;
+  dateOfBirth?: string | null;
   role: UserRole;
   isVerified: boolean;
   isSuspended: boolean;

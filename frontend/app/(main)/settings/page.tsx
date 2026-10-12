@@ -3,11 +3,16 @@
 import React from 'react';
 import { useAuth } from '@/lib/auth-context';
 import { useVault } from '@/lib/vault-context';
-import { User, Lock, ShieldCheck, Mail, LogOut, Clock } from 'lucide-react';
+import { User, Lock, ShieldCheck, Mail, LogOut, Clock, Phone, Calendar } from 'lucide-react';
 
 export default function SettingsPage() {
   const { user, logout } = useAuth();
   const { isUnlocked, lockVault } = useVault();
+
+  const fullName =
+    user?.firstName || user?.lastName
+      ? `${user.firstName || ''} ${user.lastName || ''}`.trim()
+      : 'Not set';
 
   return (
     <div className="space-y-8 max-w-4xl mx-auto">
@@ -15,7 +20,7 @@ export default function SettingsPage() {
       <div className="pb-6 border-b border-slate-200">
         <h1 className="text-2xl font-bold text-slate-900">Account & Vault Settings</h1>
         <p className="text-xs text-slate-500 mt-1">
-          Review your account profile, verification status, and vault locking policies
+          Review your personal profile details, account verification status, and vault locking policies
         </p>
       </div>
 
@@ -26,20 +31,41 @@ export default function SettingsPage() {
             <User className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="text-sm font-bold text-slate-900">User Profile</h2>
-            <p className="text-xs text-slate-500">Account identifiers and permission level</p>
+            <h2 className="text-sm font-bold text-slate-900">Personal Profile Details</h2>
+            <p className="text-xs text-slate-500">Identity details registered with PassVault</p>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 text-xs">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2 text-xs">
+          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+            <span className="text-slate-400 block mb-1">Full Name</span>
+            <span className="font-semibold text-slate-900">{fullName}</span>
+          </div>
+
           <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
             <span className="text-slate-400 block mb-1">Email Address</span>
-            <span className="font-semibold text-slate-900">{user?.email}</span>
+            <span className="font-semibold text-slate-900 font-mono">{user?.email}</span>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+            <span className="text-slate-400 block mb-1">Contact Number</span>
+            <span className="font-semibold text-slate-900">
+              {user?.contactNumber || 'Not provided'}
+            </span>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
+            <span className="text-slate-400 block mb-1">Date of Birth</span>
+            <span className="font-semibold text-slate-900">
+              {user?.dateOfBirth || 'Not provided'}
+            </span>
           </div>
 
           <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
             <span className="text-slate-400 block mb-1">Assigned Role</span>
-            <span className="font-semibold text-slate-900">{user?.role}</span>
+            <span className="font-semibold text-slate-900 uppercase tracking-wider">
+              {user?.role}
+            </span>
           </div>
 
           <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
@@ -52,13 +78,6 @@ export default function SettingsPage() {
               />
               <span>{user?.isVerified ? 'Verified' : 'Pending Verification'}</span>
             </div>
-          </div>
-
-          <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-100">
-            <span className="text-slate-400 block mb-1">Account Created</span>
-            <span className="font-semibold text-slate-900">
-              {user?.createdAt ? new Date(user.createdAt).toLocaleDateString() : '—'}
-            </span>
           </div>
         </div>
       </div>

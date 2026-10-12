@@ -8,14 +8,19 @@ generator client {
 }
 
 model User {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  passwordHash String
-  role         String   @default("USER") // "USER" | "ADMIN"
-  isVerified   Boolean  @default(false)
-  isSuspended  Boolean  @default(false)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id            String   @id @default(uuid())
+  email         String   @unique
+  firstName     String   @default("")
+  lastName      String   @default("")
+  contactNumber String?
+  dateOfBirth   String?
+  passwordHash  String
+  role          String   @default("USER") // "USER" | "ADMIN" | "SUB_ADMIN"
+  isVerified    Boolean  @default(false)
+  isSuspended   Boolean  @default(false)
+  createdBy     String?  // ID of the admin who created this account (if sub-admin)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
   sessions       AuthenticationSession[]
   mfaConfig      MfaConfig?

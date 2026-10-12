@@ -2,7 +2,11 @@ import { z } from 'zod';
 import { ROLES, STORAGE_MODES } from '../constants/index.js';
 
 export const RegisterSchema = z.object({
+  firstName: z.string().min(1, 'First name is required').max(100).trim(),
+  lastName: z.string().min(1, 'Last name is required').max(100).trim(),
   email: z.string().email('Please enter a valid email address').toLowerCase().trim(),
+  contactNumber: z.string().min(7, 'Contact number is required').max(25).trim(),
+  dateOfBirth: z.string().min(1, 'Date of birth is required').trim(),
   password: z
     .string()
     .min(10, 'Password must be at least 10 characters long')
@@ -11,9 +15,24 @@ export const RegisterSchema = z.object({
     .regex(/[0-9]/, 'Password must contain at least one number'),
 });
 
+export const CreateSubAdminSchema = z.object({
+  firstName: z.string().min(1, 'First name is required').max(100).trim(),
+  lastName: z.string().min(1, 'Last name is required').max(100).trim(),
+  email: z.string().email('Please enter a valid email address').toLowerCase().trim(),
+  contactNumber: z.string().min(7, 'Contact number is required').max(25).trim(),
+  dateOfBirth: z.string().min(1, 'Date of birth is required').trim(),
+  password: z
+    .string()
+    .min(10, 'Temporary password must be at least 10 characters long')
+    .regex(/[A-Z]/, 'Password must contain at least one uppercase letter')
+    .regex(/[a-z]/, 'Password must contain at least one lowercase letter')
+    .regex(/[0-9]/, 'Password must contain at least one number'),
+});
+
 export const LoginSchema = z.object({
   email: z.string().email('Please enter a valid email address').toLowerCase().trim(),
   password: z.string().min(1, 'Password is required'),
+  portalRole: z.enum(['USER', 'ADMIN']).optional(),
 });
 
 export const VerifyEmailSchema = z.object({
@@ -63,7 +82,7 @@ export const SyncPullQuerySchema = z.object({
 });
 
 export const AdminUserUpdateSchema = z.object({
-  role: z.enum([ROLES.USER, ROLES.ADMIN]).optional(),
+  role: z.enum([ROLES.USER, ROLES.ADMIN, ROLES.SUB_ADMIN]).optional(),
   isSuspended: z.boolean().optional(),
 });
 

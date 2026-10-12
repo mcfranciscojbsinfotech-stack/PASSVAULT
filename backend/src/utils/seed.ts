@@ -16,6 +16,10 @@ export async function provisionFirstAdmin() {
     const admin = await prisma.user.create({
       data: {
         email: CONFIG.FIRST_ADMIN_EMAIL,
+        firstName: 'System',
+        lastName: 'Administrator',
+        contactNumber: '+1-555-0100',
+        dateOfBirth: '1990-01-01',
         passwordHash,
         role: ROLES.ADMIN,
         isVerified: true,

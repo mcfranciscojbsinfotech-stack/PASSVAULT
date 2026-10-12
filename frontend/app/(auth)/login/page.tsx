@@ -4,11 +4,12 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/lib/auth-context';
-import { Shield, Lock, Mail, ArrowRight, AlertTriangle } from 'lucide-react';
+import { Shield, Lock, Mail, ArrowRight, AlertTriangle, ShieldCheck, UserCheck } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
+  const [portalRole, setPortalRole] = useState<'USER' | 'ADMIN'>('USER');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -20,14 +21,18 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const res = await login(email, password);
+      const res = await login(email, password, portalRole);
       if (res.mfaRequired && res.tempToken) {
         // Redirect to MFA verification
         sessionStorage.setItem('mfa_temp_token', res.tempToken);
         sessionStorage.setItem('mfa_email', email);
         router.push('/verify-mfa');
       } else {
-        router.push('/dashboard');
+        if (portalRole === 'ADMIN') {
+          router.push('/admin/users');
+        } else {
+          router.push('/dashboard');
+        }
       }
     } catch (err: any) {
       setError(err.message || 'Login failed. Please verify your credentials.');
@@ -36,17 +41,71 @@ export default function LoginPage() {
     }
   };
 
+  const isAdminPortal = portalRole === 'ADMIN';
+
   return (
-    <div className="flex-1 flex items-center justify-center p-4">
+    <div className="flex-1 flex items-center justify-center p-4 py-8">
       <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl border border-slate-200">
-        <div className="text-center mb-8">
-          <div className="mx-auto h-12 w-12 rounded-xl bg-cyber-50 border border-cyber-100 flex items-center justify-center text-cyber-600 mb-3 shadow-sm">
-            <Shield className="h-6 w-6" />
+        {/* Portal Selection Tabs */}
+        <div className="flex rounded-xl bg-slate-100 p-1 mb-6 text-xs font-semibold">
+          <button
+            type="button"
+            onClick={() => {
+              setPortalRole('USER');
+              setError('');
+            }}
+            className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-2 transition-all ${
+              !isAdminPortal
+                ? 'bg-white text-cyber-700 shadow-sm font-bold'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <UserCheck className="h-4 w-4" />
+            <span>User Portal</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setPortalRole('ADMIN');
+              setError('');
+            }}
+            className={`flex-1 py-2 rounded-lg flex items-center justify-center gap-2 transition-all ${
+              isAdminPortal
+                ? 'bg-slate-900 text-white shadow-sm font-bold'
+                : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Shield className="h-4 w-4 text-cyber-400" />
+            <span>Admin Portal</span>
+          </button>
+        </div>
+
+        <div className="text-center mb-6">
+          <div
+            className={`mx-auto h-12 w-12 rounded-xl border flex items-center justify-center mb-3 shadow-sm transition-colors ${
+              isAdminPortal
+                ? 'bg-slate-900 border-slate-800 text-cyber-400'
+                : 'bg-cyber-50 border-cyber-100 text-cyber-600'
+            }`}
+          >
+            {isAdminPortal ? <Shield className="h-6 w-6" /> : <ShieldCheck className="h-6 w-6" />}
           </div>
-          <h1 className="text-2xl font-bold text-slate-900">Sign in to PassVault</h1>
+
+          <h1 className="text-2xl font-bold text-slate-900">
+            {isAdminPortal ? 'Admin Console Sign In' : 'User Account Sign In'}
+          </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Access your secure personal vault and synchronized credentials
+            {isAdminPortal
+              ? 'Restricted to authorized Primary Administrators & Sub-Admins'
+              : 'Access your personal password vault and synchronized credentials'}
           </p>
+
+          {isAdminPortal && (
+            <span className="inline-block mt-2 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-200">
+              Elevated Privilege Portal
+            </span>
+          )}
         </div>
 
         {error && (
@@ -58,14 +117,16 @@ export default function LoginPage() {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Email Address</label>
+            <label className="block text-xs font-semibold text-slate-700 mb-1">
+              {isAdminPortal ? 'Admin / Sub-Admin Email' : 'Email Address'}
+            </label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <input
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="alice@example.com"
+                placeholder={isAdminPortal ? 'admin@passvault.local' : 'alice@example.com'}
                 className="w-full pl-9 pr-3.5 py-2.5 rounded-lg border border-slate-300 text-xs focus:ring-2 focus:ring-cyber-500 focus:outline-none"
                 required
               />
@@ -75,12 +136,14 @@ export default function LoginPage() {
           <div>
             <div className="flex items-center justify-between mb-1">
               <label className="block text-xs font-semibold text-slate-700">Account Password</label>
-              <Link
-                href="/recover-account"
-                className="text-[11px] font-medium text-cyber-600 hover:underline"
-              >
-                Forgot password?
-              </Link>
+              {!isAdminPortal && (
+                <Link
+                  href="/recover-account"
+                  className="text-[11px] font-medium text-cyber-600 hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              )}
             </div>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -98,18 +161,37 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 px-4 rounded-lg bg-cyber-600 hover:bg-cyber-700 text-white text-xs font-semibold shadow-md shadow-cyber-600/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            className={`w-full py-2.5 px-4 rounded-lg text-white text-xs font-semibold shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-50 ${
+              isAdminPortal
+                ? 'bg-slate-900 hover:bg-slate-800 shadow-slate-900/20'
+                : 'bg-cyber-600 hover:bg-cyber-700 shadow-cyber-600/20'
+            }`}
           >
-            <span>{loading ? 'Authenticating...' : 'Sign In'}</span>
+            <span>
+              {loading
+                ? 'Authenticating...'
+                : isAdminPortal
+                ? 'Sign In to Admin Console'
+                : 'Sign In to Personal Vault'}
+            </span>
             <ArrowRight className="h-3.5 w-3.5" />
           </button>
         </form>
 
         <div className="mt-6 pt-6 border-t border-slate-100 text-center text-xs text-slate-500">
-          Don&apos;t have an account?{' '}
-          <Link href="/register" className="font-semibold text-cyber-600 hover:underline">
-            Create an account
-          </Link>
+          {!isAdminPortal ? (
+            <>
+              Don&apos;t have an account?{' '}
+              <Link href="/register" className="font-semibold text-cyber-600 hover:underline">
+                Create an account
+              </Link>
+            </>
+          ) : (
+            <span className="text-[11px] text-slate-400">
+              Sub-admin accounts are registered exclusively by primary administrators inside the
+              Admin Dashboard.
+            </span>
+          )}
         </div>
       </div>
     </div>

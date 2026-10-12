@@ -8,7 +8,12 @@ interface AuthContextType {
   user: UserProfile | null;
   loading: boolean;
   isAdmin: boolean;
-  login: (email: string, password: string) => Promise<{ mfaRequired?: boolean; tempToken?: string }>;
+  isPrimaryAdmin: boolean;
+  login: (
+    email: string,
+    password: string,
+    portalRole?: 'USER' | 'ADMIN'
+  ) => Promise<{ mfaRequired?: boolean; tempToken?: string }>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
 }
@@ -34,14 +39,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     refreshUser();
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, portalRole?: 'USER' | 'ADMIN') => {
     const data = await apiRequest<{
       mfaRequired?: boolean;
       tempToken?: string;
       user?: UserProfile;
     }>('/auth/login', {
       method: 'POST',
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, portalRole }),
     });
 
     if (data.user) {
@@ -58,10 +63,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const isAdmin = user?.role === ROLES.ADMIN;
+  const isAdmin = user?.role === ROLES.ADMIN || user?.role === ROLES.SUB_ADMIN;
+  const isPrimaryAdmin = user?.role === ROLES.ADMIN;
 
   return (
-    <AuthContext.Provider value={{ user, loading, isAdmin, login, logout, refreshUser }}>
+    <AuthContext.Provider
+      value={{ user, loading, isAdmin, isPrimaryAdmin, login, logout, refreshUser }}
+    >
       {children}
     </AuthContext.Provider>
   );

@@ -1,9 +1,15 @@
 import { FastifyInstance, FastifyPluginAsync } from 'fastify';
 import { requireAuth } from '../../middleware/auth.js';
-import { requireAdmin } from '../../middleware/admin.js';
+import { requireAdmin, requireSuperAdmin } from '../../middleware/admin.js';
 import { prisma } from '../../utils/prisma.js';
 import { logAuditEvent } from '../../utils/audit.js';
-import { AUDIT_EVENT_TYPES, ROLES, AdminUserUpdateSchema } from '@passvault/shared';
+import { hashPassword } from '../../utils/password-hasher.js';
+import {
+  AUDIT_EVENT_TYPES,
+  ROLES,
+  AdminUserUpdateSchema,
+  CreateSubAdminSchema,
+} from '@passvault/shared';
 
 const serverStartTime = Date.now();
 
@@ -19,17 +25,25 @@ export const adminRoutes: FastifyPluginAsync = async (server: FastifyInstance) =
     const users = await prisma.user.findMany({
       where: search
         ? {
-            email: {
-              contains: search,
-            },
+            OR: [
+              { email: { contains: search } },
+              { firstName: { contains: search } },
+              { lastName: { contains: search } },
+              { contactNumber: { contains: search } },
+            ],
           }
         : undefined,
       select: {
         id: true,
         email: true,
+        firstName: true,
+        lastName: true,
+        contactNumber: true,
+        dateOfBirth: true,
         role: true,
         isVerified: true,
         isSuspended: true,
+        createdBy: true,
         createdAt: true,
         updatedAt: true,
         _count: {
@@ -45,15 +59,88 @@ export const adminRoutes: FastifyPluginAsync = async (server: FastifyInstance) =
     const formatted = users.map((u) => ({
       id: u.id,
       email: u.email,
+      firstName: u.firstName,
+      lastName: u.lastName,
+      contactNumber: u.contactNumber,
+      dateOfBirth: u.dateOfBirth,
       role: u.role,
       isVerified: u.isVerified,
       isSuspended: u.isSuspended,
+      createdBy: u.createdBy,
       createdAt: u.createdAt.toISOString(),
       activeSessionsCount: u._count.sessions,
       encryptedVaultItemsCount: u._count.vaultItems,
     }));
 
     return reply.send({ users: formatted });
+  });
+
+  // Admin registers a SUB_ADMIN account directly from the Admin Dashboard
+  server.post('/sub-admins', async (request, reply) => {
+    const adminUser = request.user!;
+
+    // Only primary ADMIN can register a SUB_ADMIN
+    if (adminUser.role !== ROLES.ADMIN) {
+      return reply.status(403).send({
+        error: 'Access denied: only primary administrators can create sub-admin accounts.',
+      });
+    }
+
+    const parseResult = CreateSubAdminSchema.safeParse(request.body);
+    if (!parseResult.success) {
+      return reply.status(400).send({ error: parseResult.error.errors[0].message });
+    }
+
+    const { firstName, lastName, email, contactNumber, dateOfBirth, password } = parseResult.data;
+
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      return reply.status(409).send({ error: 'An account with this email address already exists' });
+    }
+
+    const passwordHash = await hashPassword(password);
+
+    const subAdmin = await prisma.user.create({
+      data: {
+        email,
+        firstName,
+        lastName,
+        contactNumber,
+        dateOfBirth,
+        passwordHash,
+        role: ROLES.SUB_ADMIN,
+        isVerified: true, // Pre-verified by administrator
+        createdBy: adminUser.id,
+      },
+    });
+
+    await logAuditEvent({
+      eventType: AUDIT_EVENT_TYPES.SUB_ADMIN_CREATED,
+      status: 'SUCCESS',
+      userId: adminUser.id,
+      actorEmail: adminUser.email,
+      details: {
+        createdSubAdminId: subAdmin.id,
+        subAdminEmail: subAdmin.email,
+        firstName,
+        lastName,
+      },
+      request,
+    });
+
+    return reply.status(201).send({
+      message: 'Sub-admin account created successfully.',
+      subAdmin: {
+        id: subAdmin.id,
+        email: subAdmin.email,
+        firstName: subAdmin.firstName,
+        lastName: subAdmin.lastName,
+        contactNumber: subAdmin.contactNumber,
+        dateOfBirth: subAdmin.dateOfBirth,
+        role: subAdmin.role,
+        isVerified: subAdmin.isVerified,
+      },
+    });
   });
 
   // Update user role or suspension status
@@ -71,8 +158,22 @@ export const adminRoutes: FastifyPluginAsync = async (server: FastifyInstance) =
       return reply.status(404).send({ error: 'User not found' });
     }
 
+    // Sub-admins cannot alter primary administrators
+    if (adminUser.role === ROLES.SUB_ADMIN && targetUser.role === ROLES.ADMIN) {
+      return reply.status(403).send({
+        error: 'Access denied: sub-administrators cannot modify primary administrators.',
+      });
+    }
+
+    // Sub-admins cannot promote anyone to primary ADMIN
+    if (adminUser.role === ROLES.SUB_ADMIN && parse.data.role === ROLES.ADMIN) {
+      return reply.status(403).send({
+        error: 'Access denied: sub-administrators cannot assign primary administrator roles.',
+      });
+    }
+
     // Prevent admin from revoking their own admin role or suspending themselves
-    if (targetUser.id === adminUser.id && parse.data.role && parse.data.role !== ROLES.ADMIN) {
+    if (targetUser.id === adminUser.id && parse.data.role && parse.data.role !== adminUser.role) {
       return reply.status(400).send({ error: 'Cannot revoke your own administrator privileges' });
     }
     if (targetUser.id === adminUser.id && parse.data.isSuspended === true) {
@@ -140,6 +241,17 @@ export const adminRoutes: FastifyPluginAsync = async (server: FastifyInstance) =
   server.post('/users/:id/revoke-sessions', async (request, reply) => {
     const { id } = request.params as { id: string };
     const adminUser = request.user!;
+
+    const targetUser = await prisma.user.findUnique({ where: { id } });
+    if (!targetUser) {
+      return reply.status(404).send({ error: 'User not found' });
+    }
+
+    if (adminUser.role === ROLES.SUB_ADMIN && targetUser.role === ROLES.ADMIN) {
+      return reply.status(403).send({
+        error: 'Access denied: sub-administrators cannot revoke sessions of primary administrators.',
+      });
+    }
 
     await prisma.authenticationSession.updateMany({
       where: { userId: id, isRevoked: false },
@@ -243,7 +355,7 @@ export const adminRoutes: FastifyPluginAsync = async (server: FastifyInstance) =
       totalUsersCount: totalUsers,
       databaseEngine: 'SQLite / PostgreSQL (Prisma)',
       isolationEnforced: true,
-      isolatedCloudSyncAllowed: false, // Strict architectural guarantee
+      isolatedCloudSyncAllowed: false,
     });
   });
 

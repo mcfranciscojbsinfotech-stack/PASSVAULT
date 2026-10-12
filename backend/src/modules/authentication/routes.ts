@@ -9,14 +9,14 @@ import { requireAuth } from '../../middleware/auth.js';
 import { authenticator } from 'otplib';
 
 export const authRoutes: FastifyPluginAsync = async (server: FastifyInstance) => {
-  // Register
+  // Register standard user account
   server.post('/register', async (request, reply) => {
     const parseResult = RegisterSchema.safeParse(request.body);
     if (!parseResult.success) {
       return reply.status(400).send({ error: parseResult.error.errors[0].message });
     }
 
-    const { email, password } = parseResult.data;
+    const { firstName, lastName, email, contactNumber, dateOfBirth, password } = parseResult.data;
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
@@ -32,6 +32,10 @@ export const authRoutes: FastifyPluginAsync = async (server: FastifyInstance) =>
     const user = await prisma.user.create({
       data: {
         email,
+        firstName,
+        lastName,
+        contactNumber,
+        dateOfBirth,
         passwordHash,
         role,
         isVerified: userCount === 0, // Auto-verify first admin for local ease
@@ -56,7 +60,7 @@ export const authRoutes: FastifyPluginAsync = async (server: FastifyInstance) =>
       status: 'SUCCESS',
       userId: user.id,
       actorEmail: user.email,
-      details: { role },
+      details: { role, firstName, lastName },
       request,
     });
 
@@ -70,6 +74,10 @@ export const authRoutes: FastifyPluginAsync = async (server: FastifyInstance) =>
       user: {
         id: user.id,
         email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        contactNumber: user.contactNumber,
+        dateOfBirth: user.dateOfBirth,
         role: user.role,
         isVerified: user.isVerified,
       },
@@ -83,7 +91,7 @@ export const authRoutes: FastifyPluginAsync = async (server: FastifyInstance) =>
       return reply.status(400).send({ error: parseResult.error.errors[0].message });
     }
 
-    const { email, password } = parseResult.data;
+    const { email, password, portalRole } = parseResult.data;
 
     const user = await prisma.user.findUnique({
       where: { email },
@@ -126,6 +134,21 @@ export const authRoutes: FastifyPluginAsync = async (server: FastifyInstance) =>
       return reply.status(401).send({ error: 'Invalid email or password' });
     }
 
+    // Portal role verification: if logging in through Admin Portal, verify admin or sub-admin role
+    if (portalRole === 'ADMIN' && user.role !== ROLES.ADMIN && user.role !== ROLES.SUB_ADMIN) {
+      await logAuditEvent({
+        eventType: AUDIT_EVENT_TYPES.AUTH_LOGIN_FAILED,
+        status: 'FAILURE',
+        userId: user.id,
+        actorEmail: user.email,
+        details: { reason: 'Attempted admin portal login without administrator role' },
+        request,
+      });
+      return reply.status(403).send({
+        error: 'Access denied: this account does not possess administrator privileges. Please use User Login.',
+      });
+    }
+
     // Check if MFA is enabled
     if (user.mfaConfig?.isEnabled) {
       // Issue temporary MFA token valid for 5 minutes
@@ -154,6 +177,7 @@ export const authRoutes: FastifyPluginAsync = async (server: FastifyInstance) =>
       status: 'SUCCESS',
       userId: user.id,
       actorEmail: user.email,
+      details: { portalRole: portalRole || 'USER', role: user.role },
       request,
     });
 
@@ -162,6 +186,10 @@ export const authRoutes: FastifyPluginAsync = async (server: FastifyInstance) =>
       user: {
         id: user.id,
         email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        contactNumber: user.contactNumber,
+        dateOfBirth: user.dateOfBirth,
         role: user.role,
         isVerified: user.isVerified,
         mfaEnabled: false,
@@ -253,6 +281,10 @@ export const authRoutes: FastifyPluginAsync = async (server: FastifyInstance) =>
       user: {
         id: user.id,
         email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        contactNumber: user.contactNumber,
+        dateOfBirth: user.dateOfBirth,
         role: user.role,
         isVerified: user.isVerified,
         mfaEnabled: true,
@@ -284,6 +316,10 @@ export const authRoutes: FastifyPluginAsync = async (server: FastifyInstance) =>
       user: {
         id: user.id,
         email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        contactNumber: user.contactNumber,
+        dateOfBirth: user.dateOfBirth,
         role: user.role,
         isVerified: user.isVerified,
         isSuspended: user.isSuspended,

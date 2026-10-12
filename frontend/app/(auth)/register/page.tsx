@@ -5,12 +5,26 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { apiRequest } from '@/lib/api-client';
 import { useAuth } from '@/lib/auth-context';
-import { Shield, Lock, Mail, ArrowRight, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import {
+  Shield,
+  Lock,
+  Mail,
+  User,
+  Phone,
+  Calendar,
+  ArrowRight,
+  AlertTriangle,
+  CheckCircle2,
+} from 'lucide-react';
 
 export default function RegisterPage() {
   const router = useRouter();
   const { refreshUser } = useAuth();
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const [contactNumber, setContactNumber] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -33,7 +47,14 @@ export default function RegisterPage() {
         user: { id: string; email: string; isVerified: boolean };
       }>('/auth/register', {
         method: 'POST',
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          email: email.trim(),
+          contactNumber: contactNumber.trim(),
+          dateOfBirth,
+          password,
+        }),
       });
 
       setSuccessMsg(res.message);
@@ -49,9 +70,9 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex-1 flex items-center justify-center p-4">
-      <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-xl border border-slate-200">
-        <div className="text-center mb-8">
+    <div className="flex-1 flex items-center justify-center p-4 py-8">
+      <div className="w-full max-w-lg rounded-2xl bg-white p-8 shadow-xl border border-slate-200">
+        <div className="text-center mb-6">
           <div className="mx-auto h-12 w-12 rounded-xl bg-cyber-50 border border-cyber-100 flex items-center justify-center text-cyber-600 mb-3 shadow-sm">
             <Shield className="h-6 w-6" />
           </div>
@@ -76,6 +97,40 @@ export default function RegisterPage() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Personal Details: First and Last Name */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">First Name</label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <input
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder="John"
+                  className="w-full pl-9 pr-3.5 py-2.5 rounded-lg border border-slate-300 text-xs focus:ring-2 focus:ring-cyber-500 focus:outline-none"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">Last Name</label>
+              <div className="relative">
+                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <input
+                  type="text"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  placeholder="Doe"
+                  className="w-full pl-9 pr-3.5 py-2.5 rounded-lg border border-slate-300 text-xs focus:ring-2 focus:ring-cyber-500 focus:outline-none"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Email Address */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">Email Address</label>
             <div className="relative">
@@ -91,6 +146,43 @@ export default function RegisterPage() {
             </div>
           </div>
 
+          {/* Contact Number and Date of Birth */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Contact Number
+              </label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <input
+                  type="tel"
+                  value={contactNumber}
+                  onChange={(e) => setContactNumber(e.target.value)}
+                  placeholder="+1 (555) 000-0000"
+                  className="w-full pl-9 pr-3.5 py-2.5 rounded-lg border border-slate-300 text-xs focus:ring-2 focus:ring-cyber-500 focus:outline-none"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Date of Birth
+              </label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <input
+                  type="date"
+                  value={dateOfBirth}
+                  onChange={(e) => setDateOfBirth(e.target.value)}
+                  className="w-full pl-9 pr-3.5 py-2.5 rounded-lg border border-slate-300 text-xs focus:ring-2 focus:ring-cyber-500 focus:outline-none"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Account Password */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
               Account Authentication Password
@@ -108,6 +200,7 @@ export default function RegisterPage() {
             </div>
           </div>
 
+          {/* Confirm Password */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
               Confirm Password
